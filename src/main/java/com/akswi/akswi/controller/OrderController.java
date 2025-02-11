@@ -11,6 +11,7 @@ import java.security.Principal;
 import java.util.List;
 
 @RestController
+@CrossOrigin()
 @RequestMapping("/api/orders")
 public class OrderController {
 
