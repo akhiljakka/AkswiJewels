@@ -1,16 +1,14 @@
 package com.akswi.akswi.entity;
 
-
-import jakarta.persistence.Entity;
 import jakarta.persistence.*;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import org.hibernate.annotations.CreationTimestamp;
+
 
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "coupons")
@@ -18,84 +16,92 @@ public class Coupon {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long couponId;
+    private Long id;
 
-    @Column(nullable = false, unique = true, length = 50)
+    @Column(nullable = false, unique = true)
     private String code;
 
-    // "percentage" or "fixed"
-    @Column(nullable = false, length = 20)
-    private String discountType;
+    @Column(nullable = true)
+    private BigDecimal discount;
 
-    @Column(nullable = false)
-    private BigDecimal discountValue;
+    @Column
+    private LocalDate startDate;
 
+    @Column
+    private LocalDate endDate;
+
+    @Column
     private LocalDate expiryDate;
 
-    private Integer usageLimit = 1;
+    @Column(nullable = false)
+    private int usedCount;
 
-    private Integer usedCount = 0;
+    @Column
+    private String discountType;
 
-    // Optional association if the coupon is for a specific user
-    @ManyToOne
-    @JoinColumn(name = "user_specific")
-    private User userSpecific;
+    @Column
+    private BigDecimal discountValue;
 
-    @CreationTimestamp
-    private LocalDateTime createdAt;
+    @Column
+    private Integer usageLimit;
 
-    // Getters and setters
-    // … (omitted for brevity)
+    @ManyToMany(fetch = FetchType.EAGER)  // EAGER fetch so that categories are loaded for serialization
+    @JoinTable(
+            name = "coupon_categories",
+            joinColumns = @JoinColumn(name = "coupon_id"),
+            inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    private Set<Category> categories = new HashSet<>();
 
+    @Transient  // This field is not persisted in the database.
+    private List<Long> categoryIds;
+
+    // Getters and setters...
+
+
+    public List<Long> getCategoryIds() {
+        return categoryIds;
+    }
+
+    public void setCategoryIds(List<Long> categoryIds) {
+        this.categoryIds = categoryIds;
+    }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getCode() { return code; }
+    public void setCode(String code) { this.code = code; }
+
+    public BigDecimal getDiscount() { return discount; }
+    public void setDiscount(BigDecimal discount) { this.discount = discount; }
+
+    public LocalDate getStartDate() { return startDate; }
+    public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
+
+    public LocalDate getEndDate() { return endDate; }
+    public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
+
+    public LocalDate getExpiryDate() { return expiryDate; }
+    public void setExpiryDate(LocalDate expiryDate) { this.expiryDate = expiryDate; }
+
+    public int getUsedCount() { return usedCount; }
+    public void setUsedCount(int usedCount) { this.usedCount = usedCount; }
+
+    public String getDiscountType() { return discountType; }
+    public void setDiscountType(String discountType) { this.discountType = discountType; }
+
+    public BigDecimal getDiscountValue() { return discountValue; }
+    public void setDiscountValue(BigDecimal discountValue) { this.discountValue = discountValue; }
+
+    public Integer getUsageLimit() { return usageLimit; }
+    public void setUsageLimit(Integer usageLimit) { this.usageLimit = usageLimit; }
+
+    public Set<Category> getCategories() { return categories; }
+    public void setCategories(Set<Category> categories) { this.categories = categories; }
+
+    // Optional alias for coupon id
     public Long getCouponId() {
-        return couponId;
-    }
-    public void setCouponId(Long couponId) {
-        this.couponId = couponId;
-    }
-    public String getCode() {
-        return code;
-    }
-    public void setCode(String code) {
-        this.code = code;
-    }
-    public String getDiscountType() {
-        return discountType;
-    }
-    public void setDiscountType(String discountType) {
-        this.discountType = discountType;
-    }
-    public BigDecimal getDiscountValue() {
-        return discountValue;
-    }
-    public void setDiscountValue(BigDecimal discountValue) {
-        this.discountValue = discountValue;
-    }
-    public LocalDate getExpiryDate() {
-        return expiryDate;
-    }
-    public void setExpiryDate(LocalDate expiryDate) {
-        this.expiryDate = expiryDate;
-    }
-    public Integer getUsageLimit() {
-        return usageLimit;
-    }
-    public void setUsageLimit(Integer usageLimit) {
-        this.usageLimit = usageLimit;
-    }
-    public Integer getUsedCount() {
-        return usedCount;
-    }
-    public void setUsedCount(Integer usedCount) {
-        this.usedCount = usedCount;
-    }
-    public User getUserSpecific() {
-        return userSpecific;
-    }
-    public void setUserSpecific(User userSpecific) {
-        this.userSpecific = userSpecific;
-    }
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
+        return id;
     }
 }

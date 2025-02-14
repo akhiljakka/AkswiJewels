@@ -36,16 +36,16 @@ public class AdminController {
         return productService.saveProduct(product);
     }
 
-    @PutMapping("/products/{id}")
-    public Product updateProduct(@PathVariable Long id, @RequestBody Product updatedProduct) {
-        Product product = productService.getProductById(id);
-        product.setName(updatedProduct.getName());
-        product.setDescription(updatedProduct.getDescription());
-        product.setPrice(updatedProduct.getPrice());
-        product.setStock(updatedProduct.getStock());
-        product.setImageUrl(updatedProduct.getImageUrl());
-        return productService.saveProduct(product);
-    }
+//    @PutMapping("/products/{id}")
+//    public Product updateProduct(@PathVariable Long id, @RequestBody Product updatedProduct) {
+//        Product product = productService.getProductById(id);
+//        product.setName(updatedProduct.getName());
+//        product.setDescription(updatedProduct.getDescription());
+//        product.setPrice(updatedProduct.getPrice());
+//        product.setStock(updatedProduct.getStock());
+//        product.setImageUrl(updatedProduct.getImageUrl());
+//        return productService.saveProduct(product);
+//    }
 
     @DeleteMapping("/products/{id}")
     public ResponseEntity<?> deleteProduct(@PathVariable Long id) {

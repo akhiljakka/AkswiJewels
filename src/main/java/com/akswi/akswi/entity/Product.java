@@ -22,6 +22,16 @@ public class Product {
 
     @Column(columnDefinition = "TEXT")
     private String description;
+///
+    @ManyToOne
+    @JoinColumn(name = "category_id")
+    private Category category;
+
+
+    // Add the sku field that the repository query expects
+    @Column(unique = true, nullable = false)
+    private String sku;
+///
 
     @Column(nullable = false)
     private BigDecimal price;
@@ -66,6 +76,23 @@ public class Product {
     public void setStock(Integer stock) {
         this.stock = stock;
     }
+///
+    public Category getCategory() {
+        return category;
+    }
+
+    public void setCategory(Category category) {
+        this.category = category;
+    }
+
+
+    public String getSku() {
+        return sku;
+    }
+    public void setSku(String sku) {
+        this.sku = sku;
+    }
+    ///
     public String getImageUrl() {
         return imageUrl;
     }
@@ -75,4 +102,5 @@ public class Product {
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
+
 }
