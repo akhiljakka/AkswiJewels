@@ -146,4 +146,9 @@ public class ProductService {
         product.setCategory(category);
         return productRepository.save(product);
     }
+
+    public List<Product> findByCategory(Long categoryId) {
+        return productRepository.findByCategoryId(categoryId);
+    }
+
 }

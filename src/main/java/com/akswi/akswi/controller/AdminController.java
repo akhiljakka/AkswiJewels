@@ -3,17 +3,20 @@ package com.akswi.akswi.controller;
 import com.akswi.akswi.entity.Coupon;
 import com.akswi.akswi.entity.Order;
 import com.akswi.akswi.entity.Product;
+import com.akswi.akswi.entity.User;
 import com.akswi.akswi.service.CouponService;
 import com.akswi.akswi.service.OrderService;
 import com.akswi.akswi.service.ProductService;
+import com.akswi.akswi.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin()
 public class AdminController {
 
     @Autowired
@@ -24,6 +27,10 @@ public class AdminController {
 
     @Autowired
     private OrderService orderService;
+
+    @Autowired
+    private UserService userService;
+
 
     // Product Management
     @GetMapping("/products")
@@ -69,6 +76,11 @@ public class AdminController {
         return couponService.updateCoupon(id, coupon);
     }
 
+    @GetMapping("/coupons/{id}")
+    public Optional<Coupon> getCouponById(@PathVariable Long id) {
+        return couponService.getCouponById(id);
+    }
+
     @DeleteMapping("/coupons/{id}")
     public ResponseEntity<?> deleteCoupon(@PathVariable Long id) {
         couponService.deleteCoupon(id);
@@ -79,5 +91,10 @@ public class AdminController {
     @PutMapping("/orders/{id}/status")
     public Order updateOrderStatus(@PathVariable Long id, @RequestParam String status) {
         return orderService.updateOrderStatus(id, status);
+    }
+
+    @GetMapping("/users")
+    public List<User> getAllUsers() {
+        return userService.getAllUsers();
     }
 }

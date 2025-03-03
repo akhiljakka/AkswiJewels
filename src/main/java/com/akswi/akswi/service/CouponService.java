@@ -7,9 +7,8 @@ import com.akswi.akswi.repository.CouponRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.math.BigDecimal;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,7 +31,34 @@ public class CouponService {
     }
 
     public Coupon createCoupon(Coupon coupon) {
-        return couponRepository.save(coupon);
+
+        coupon.setCode(coupon.getCode());
+        //       coupon.setDiscount(BigDecimal.valueOf(couponRequest.getDiscount()));
+        coupon.setDiscountType(coupon.getDiscountType());
+        coupon.setDiscountValue(coupon.getDiscountValue());
+        coupon.setStartDate(coupon.getStartDate());
+        coupon.setEndDate(coupon.getEndDate());
+        coupon.setExpiryDate(coupon.getExpiryDate());
+        coupon.setUsageLimit(coupon.getUsageLimit());
+        coupon.setUsedCount(0);
+
+        // Process the categoryIds
+        if (coupon.getCategoryIds() != null && !coupon.getCategoryIds().isEmpty()) {
+            Set<Category> categories = new HashSet<>();
+            for (Long catId : coupon.getCategoryIds()) {
+                Category category = categoryRepository.findById(catId)
+                        .orElseThrow(() -> new RuntimeException("Category not found with id: " + catId));
+                categories.add(category);
+            }
+            coupon.setCategories(categories);
+        } else {
+            coupon.setCategories(new HashSet<>());
+        }
+
+        Coupon savedCoupon = couponRepository.save(coupon);
+        // Debug print
+        System.out.println("Coupon saved with categories: " + savedCoupon.getCategories());
+        return savedCoupon;
     }
 
 
@@ -68,6 +94,10 @@ public class CouponService {
 
     public void deleteCoupon(Long id) {
         couponRepository.deleteById(id);
+    }
+
+    public Optional<Coupon> getCouponById(Long id) {
+        return couponRepository.findById(id);
     }
 }
 

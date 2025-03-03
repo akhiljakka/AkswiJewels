@@ -64,4 +64,12 @@ public class ProductController {
         Product updatedProduct = productService.updateProductCategory(id, categoryId);
         return ResponseEntity.ok(updatedProduct);
     }
+
+    @GetMapping("/category")
+    public List<Product> getProductsByCategoryParam(@RequestParam(value="categoryId", required=false) Long categoryId) {
+
+            return productService.findByCategory(categoryId);
+
+    }
+
 }
