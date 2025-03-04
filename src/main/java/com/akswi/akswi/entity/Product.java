@@ -13,42 +13,43 @@ import java.time.LocalDateTime;
 @Table(name = "products")
 public class Product {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long productId;
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        private Long productId;
 
-    @Column(nullable = false, length = 100)
-    private String name;
+        @Column(nullable = false, length = 100)
+        private String name;
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
-///
-    @ManyToOne
-    @JoinColumn(name = "category_id")
-    private Category category;
+        @Column(columnDefinition = "TEXT")
+        private String description;
+    ///
+        @ManyToOne
+        @JoinColumn(name = "category_id")
+        private Category category;
 
 
-    // Add the sku field that the repository query expects
-    @Column(unique = true, nullable = false)
-    private String sku;
-///
+        // Add the sku field that the repository query expects
+        @Column(unique = true, nullable = false)
+        private String sku;
+    ///
 
-    @Column(nullable = false)
-    private BigDecimal price;
+        @Column(nullable = false)
+        private BigDecimal price;
 
-    private Integer stock = 0;
+        private Integer stock = 0;
 
-    private String imageUrl;
+        @Column(name = "image_url", length = 1000)
+        private String imageUrl;
 
-    @CreationTimestamp
-    private LocalDateTime createdAt;
+        @CreationTimestamp
+        private LocalDateTime createdAt;
 
-    // Getters and setters
-    // … (omitted for brevity)
+        // Getters and setters
+        // … (omitted for brevity)
 
-    public Long getProductId() {
-        return productId;
-    }
+        public Long getProductId() {
+            return productId;
+        }
     public void setProductId(Long productId) {
         this.productId = productId;
     }

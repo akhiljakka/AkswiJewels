@@ -73,34 +73,25 @@ public class ProductService {
         int createdCount = 0;
         int updatedCount = 0;
         try (CSVReader reader = new CSVReader(new InputStreamReader(file.getInputStream()))) {
-            // Read header row: sku, name, price, description, categoryName
+            // Read header row: sku,name,price,description,categoryName,imageUrl
             String[] header = reader.readNext();
             String[] line;
             while ((line = reader.readNext()) != null) {
-                if (line.length < 4) continue; // Ensure required fields are present.
+                if (line.length < 5) continue; // Ensure required fields are present
 
                 String sku = line[0].trim();
                 String name = line[1].trim();
                 String priceStr = line[2].trim();
                 String description = line[3].trim();
-                String categoryName = (line.length > 4) ? line[4].trim() : null;
+                String categoryName = line[4].trim();
+                String imageUrl = (line.length > 5) ? line[5].trim() : "";
 
                 if (sku.isEmpty() || name.isEmpty() || priceStr.isEmpty()) continue;
 
-                // Convert price string to BigDecimal.
                 BigDecimal price = new BigDecimal(priceStr);
 
-                // Resolve or create the category based on categoryName.
-                Category category = null;
-                if (categoryName != null && !categoryName.isEmpty()) {
-                    category = categoryRepository.findByName(categoryName);
-                    if (category == null) {
-                        category = new Category();
-                        category.setName(categoryName);
-                        category.setDescription("");
-                        category = categoryRepository.save(category);
-                    }
-                }
+                // Use the helper method to resolve or create the category
+                Category category = resolveCategory(categoryName);
 
                 // Check if a product with the given SKU already exists.
                 Product product = productRepository.findBySku(sku);
@@ -110,6 +101,7 @@ public class ProductService {
                     product.setPrice(price);
                     product.setDescription(description);
                     product.setCategory(category);
+                    product.setImageUrl(imageUrl);
                     productRepository.save(product);
                     updatedCount++;
                 } else {
@@ -120,14 +112,13 @@ public class ProductService {
                     newProduct.setPrice(price);
                     newProduct.setDescription(description);
                     newProduct.setCategory(category);
+                    newProduct.setImageUrl(imageUrl);
                     productRepository.save(newProduct);
                     createdCount++;
                 }
             }
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to import products: " + e.getMessage());
-        } catch (CsvValidationException e) {
-            throw new RuntimeException("Failed to import products: " + e.getMessage());
+        } catch (IOException | CsvValidationException ex) {
+            throw new RuntimeException("Failed to import products: " + ex.getMessage());
         }
 
         Map<String, Object> result = new HashMap<>();
@@ -136,6 +127,7 @@ public class ProductService {
         result.put("message", "Import completed successfully");
         return result;
     }
+
 
     // New method: Update the category of an existing product by its ID.
     public Product updateProductCategory(Long id, Long categoryId) {
@@ -150,5 +142,20 @@ public class ProductService {
     public List<Product> findByCategory(Long categoryId) {
         return productRepository.findByCategoryId(categoryId);
     }
+    private Category resolveCategory(String categoryName) {
+        if (categoryName == null || categoryName.isEmpty()) {
+            return null;
+        }
+        Category category = categoryRepository.findByName(categoryName);
+        if (category == null) {
+            category = new Category();
+            category.setName(categoryName);
+            category.setDescription(""); // Or any default value
+            category = categoryRepository.save(category);
+        }
+        return category;
+    }
+
+
 
 }
