@@ -1,5 +1,6 @@
 package com.akswi.akswi.controller;
 
+import com.akswi.akswi.dto.StatisticsDTO;
 import com.akswi.akswi.entity.Order;
 import com.akswi.akswi.entity.User;
 import com.akswi.akswi.service.OrderService;
@@ -9,6 +10,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @CrossOrigin()
@@ -16,7 +19,7 @@ import java.util.List;
 public class OrderController {
 
     @Autowired
-    private OrderService orderService;
+    private OrderService  orderService;
 
     @Autowired
     private UserService userService;
@@ -39,5 +42,27 @@ public class OrderController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return orderService.getOrdersByUser(user);
     }
+
+    @GetMapping
+    public List<Order> getOrders(){
+        return orderService.getOrders();
+    }
+
+    @PutMapping("/{orderId}")
+    public Order updateOrderStatus(@PathVariable Long orderId, @RequestBody Map<String, String> statusUpdate) {
+        String newStatus = statusUpdate.get("status");
+        return orderService.updateOrderStatus(orderId, newStatus);
+    }
+
+    @GetMapping("/{orderId}")
+    public Optional<Order> getOrderById(@PathVariable Long orderId){
+        return orderService.getOrderById(orderId);
+    }
+    @GetMapping("/statistics")
+    public StatisticsDTO getStatistics(@RequestParam(defaultValue = "3days") String range) {
+        return orderService.getStatistics(range);
+    }
+
+
 }
 

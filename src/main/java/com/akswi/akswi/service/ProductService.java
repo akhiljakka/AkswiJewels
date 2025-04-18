@@ -1,31 +1,45 @@
 package com.akswi.akswi.service;
 
-import com.akswi.akswi.entity.Product;
 import com.akswi.akswi.entity.Category;
-import com.akswi.akswi.repository.ProductRepository;
+import com.akswi.akswi.entity.Product;
+import com.akswi.akswi.entity.ProductStatus;
 import com.akswi.akswi.repository.CategoryRepository;
+import com.akswi.akswi.repository.ProductRepository;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.io.InputStreamReader;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class ProductService {
 
-    @Autowired
-    private ProductRepository productRepository;
+    @Autowired private ProductRepository productRepository;
+    @Autowired private CategoryRepository categoryRepository;
 
-    @Autowired
-    private CategoryRepository categoryRepository;
+    /** Fetch paginated + filtered products **/
+    public Page<Product> getProducts(
+            Long categoryId,
+            String name,
+            ProductStatus status,
+            int page,
+            int size
+    ) {
+        return productRepository.findByFilters(
+                categoryId, name, status, PageRequest.of(page, size)
+        );
+    }
 
+    /** Full list, no paging **/
     public List<Product> getAllProducts() {
         return productRepository.findAll();
     }
@@ -36,6 +50,7 @@ public class ProductService {
     }
 
     public Product saveProduct(Product product) {
+        // default timestamps handled by Hibernate
         return productRepository.save(product);
     }
 
@@ -43,119 +58,134 @@ public class ProductService {
         productRepository.deleteById(id);
     }
 
-    public Product updateProduct(Long id, Product updatedProduct) {
+    /** Update every field (including new ones) **/
+    public Product updateProduct(Long id, Product updated) {
         return productRepository.findById(id)
-                .map(product -> {
-                    product.setName(updatedProduct.getName());
-                    product.setDescription(updatedProduct.getDescription());
-                    product.setPrice(updatedProduct.getPrice());
-                    product.setStock(updatedProduct.getStock());
-                    product.setImageUrl(updatedProduct.getImageUrl());
-                    product.setSku(updatedProduct.getSku());
+                .map(p -> {
+                    // basic fields
+                    p.setName(updated.getName());
+                    p.setDescription(updated.getDescription());
+                    p.setImageUrl(updated.getImageUrl());
+                    p.setSku(updated.getSku());
+                    p.setPrice(updated.getPrice());
 
-                    // Update the category explicitly:
-                    if (updatedProduct.getCategory() != null && updatedProduct.getCategory().getId() != null) {
-                        Category category = categoryRepository.findById(updatedProduct.getCategory().getId())
-                                .orElseThrow(() -> new RuntimeException("Category not found with id " + updatedProduct.getCategory().getId()));
-                        product.setCategory(category);
+                    // new SEO / identity
+                    p.setSlug(updated.getSlug());
+                    p.setShortDescription(updated.getShortDescription());
+                    p.setBenefits(updated.getBenefits());
+
+                    // new pricing
+                    p.setCostPrice(updated.getCostPrice());
+                    p.setDiscountPrice(updated.getDiscountPrice());
+                    p.setLowPrice(updated.getLowPrice());
+                    p.setCurrency(updated.getCurrency());
+
+                    // inventory
+                    p.setStockQty(updated.getStockQty());
+                    p.setStockStatus(updated.getStockStatus());
+                    p.setCartLimit(updated.getCartLimit());
+
+                    // flags / status
+                    p.setStatus(updated.getStatus());
+                    p.setFeatured(updated.getFeatured());
+                    p.setNewArrival(updated.getNewArrival());
+                    p.setBestSeller(updated.getBestSeller());
+                    p.setHotDeal(updated.getHotDeal());
+
+                    // collections
+                    p.setTags(updated.getTags());
+                    p.setKeywords(updated.getKeywords());
+                    p.setCities(updated.getCities());
+                    p.setImageUrls(updated.getImageUrls());
+
+                    // SEO metadata
+                    p.setMetaTitle(updated.getMetaTitle());
+                    p.setMetaDescription(updated.getMetaDescription());
+                    p.setMetaKeywords(updated.getMetaKeywords());
+
+                    // category
+                    if (updated.getCategory() != null && updated.getCategory().getId() != null) {
+                        Category c = categoryRepository.findById(updated.getCategory().getId())
+                                .orElseThrow(() -> new RuntimeException("Category not found"));
+                        p.setCategory(c);
                     } else {
-                        product.setCategory(null);
+                        p.setCategory(null);
                     }
 
-                    return productRepository.save(product);
+                    return productRepository.save(p);
                 })
-                .orElseThrow(() -> new RuntimeException("Product not found with id " + id));
+                .orElseThrow(() -> new RuntimeException("Product not found"));
     }
 
-    // New method: Import products from a CSV file.
-    // Expected CSV header: sku,name,price,description,categoryName
-    public Map<String, Object> importProducts(MultipartFile file) {
-        int createdCount = 0;
-        int updatedCount = 0;
-        try (CSVReader reader = new CSVReader(new InputStreamReader(file.getInputStream()))) {
-            // Read header row: sku,name,price,description,categoryName,imageUrl
-            String[] header = reader.readNext();
-            String[] line;
-            while ((line = reader.readNext()) != null) {
-                if (line.length < 5) continue; // Ensure required fields are present
+    /** Bulk import from CSV */
+    public Map<String,Object> importProducts(MultipartFile file) {
+        int created=0, updated=0;
+        try (CSVReader rdr = new CSVReader(new InputStreamReader(file.getInputStream()))) {
+            String[] header = rdr.readNext();
+            String[] row;
+            while ((row = rdr.readNext()) != null) {
+                if (row.length < 5) continue;
+                String sku = row[0].trim();
+                String name = row[1].trim();
+                BigDecimal price = new BigDecimal(row[2].trim());
+                String desc = row[3].trim();
+                String categoryName = row[4].trim();
+                String imageUrl = row.length>5 ? row[5].trim() : "";
 
-                String sku = line[0].trim();
-                String name = line[1].trim();
-                String priceStr = line[2].trim();
-                String description = line[3].trim();
-                String categoryName = line[4].trim();
-                String imageUrl = (line.length > 5) ? line[5].trim() : "";
+                Category cat = resolveCategory(categoryName);
 
-                if (sku.isEmpty() || name.isEmpty() || priceStr.isEmpty()) continue;
-
-                BigDecimal price = new BigDecimal(priceStr);
-
-                // Use the helper method to resolve or create the category
-                Category category = resolveCategory(categoryName);
-
-                // Check if a product with the given SKU already exists.
-                Product product = productRepository.findBySku(sku);
-                if (product != null) {
-                    // Update the existing product.
-                    product.setName(name);
-                    product.setPrice(price);
-                    product.setDescription(description);
-                    product.setCategory(category);
-                    product.setImageUrl(imageUrl);
-                    productRepository.save(product);
-                    updatedCount++;
+                Product prod = productRepository.findBySku(sku);
+                if (prod != null) {
+                    prod.setName(name);
+                    prod.setPrice(price);
+                    prod.setDescription(desc);
+                    prod.setCategory(cat);
+                    prod.setImageUrl(imageUrl);
+                    updated++;
                 } else {
-                    // Create a new product.
-                    Product newProduct = new Product();
-                    newProduct.setSku(sku);
-                    newProduct.setName(name);
-                    newProduct.setPrice(price);
-                    newProduct.setDescription(description);
-                    newProduct.setCategory(category);
-                    newProduct.setImageUrl(imageUrl);
-                    productRepository.save(newProduct);
-                    createdCount++;
+                    prod = new Product();
+                    prod.setSku(sku);
+                    prod.setName(name);
+                    prod.setPrice(price);
+                    prod.setDescription(desc);
+                    prod.setCategory(cat);
+                    prod.setImageUrl(imageUrl);
+                    created++;
                 }
+                productRepository.save(prod);
             }
-        } catch (IOException | CsvValidationException ex) {
-            throw new RuntimeException("Failed to import products: " + ex.getMessage());
+        } catch (IOException|CsvValidationException e) {
+            throw new RuntimeException("Failed CSV import: "+e.getMessage());
         }
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("created", createdCount);
-        result.put("updated", updatedCount);
-        result.put("message", "Import completed successfully");
+        Map<String,Object> result = new HashMap<>();
+        result.put("created", created);
+        result.put("updated", updated);
+        result.put("message", "Import finished");
         return result;
     }
 
-
-    // New method: Update the category of an existing product by its ID.
+    /** Change category on an existing product **/
     public Product updateProductCategory(Long id, Long categoryId) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found with id " + id));
-        Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new RuntimeException("Category not found with id " + categoryId));
-        product.setCategory(category);
-        return productRepository.save(product);
+        Product p = getProductById(id);
+        Category c = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new RuntimeException("Category not found"));
+        p.setCategory(c);
+        return productRepository.save(p);
     }
 
+    /** Simple category lookup **/
     public List<Product> findByCategory(Long categoryId) {
-        return productRepository.findByCategoryId(categoryId);
-    }
-    private Category resolveCategory(String categoryName) {
-        if (categoryName == null || categoryName.isEmpty()) {
-            return null;
-        }
-        Category category = categoryRepository.findByName(categoryName);
-        if (category == null) {
-            category = new Category();
-            category.setName(categoryName);
-            category.setDescription(""); // Or any default value
-            category = categoryRepository.save(category);
-        }
-        return category;
+        return productRepository.findByCategoryIdAndStatus(categoryId, null);
     }
 
-
-
+    private Category resolveCategory(String name) {
+        if (name == null || name.isBlank()) return null;
+        Category c = categoryRepository.findByName(name);
+        if (c == null) {
+            c = new Category();
+            c.setName(name);
+            c = categoryRepository.save(c);
+        }
+        return c;
+    }
 }

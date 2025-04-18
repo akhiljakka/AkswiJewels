@@ -1,75 +1,91 @@
 package com.akswi.akswi.controller;
 
 import com.akswi.akswi.entity.Product;
+import com.akswi.akswi.entity.ProductStatus;
 import com.akswi.akswi.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/products")
-@CrossOrigin()
+@CrossOrigin
 public class ProductController {
 
-    @Autowired
-    private ProductService productService;
+    @Autowired private ProductService productService;
 
-    // GET all products
+    /** Paginated & filtered **/
     @GetMapping
-    public List<Product> getProducts() {
+    public Page<Product> getProducts(
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) ProductStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return productService.getProducts(categoryId, name, status, page, size);
+    }
+
+    /** Full list **/
+    @GetMapping("/all")
+    public List<Product> getAllProducts() {
         return productService.getAllProducts();
     }
 
-    // GET a product by its ID
+    /** Single product **/
     @GetMapping("/{id}")
-    public Product getProduct(@PathVariable Long id) {
-        return productService.getProductById(id);
+    public ResponseEntity<Product> getProduct(@PathVariable Long id) {
+        return ResponseEntity.ok(productService.getProductById(id));
     }
 
-    // PUT to update an existing product (all fields)
+    /** Create **/
+    @PostMapping
+    public ResponseEntity<Product> createProduct(@RequestBody Product p) {
+        return ResponseEntity.status(201).body(productService.saveProduct(p));
+    }
+
+    /** Update **/
     @PutMapping("/{id}")
-    public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody Product product) {
-        Product updatedProduct = productService.updateProduct(id, product);
-        return ResponseEntity.ok(updatedProduct);
+    public ResponseEntity<Product> updateProduct(
+            @PathVariable Long id,
+            @RequestBody Product p
+    ) {
+        return ResponseEntity.ok(productService.updateProduct(id, p));
     }
 
-    /////
-//    @PostMapping
-//    public ResponseEntity<Product> createProduct(@RequestBody Product product) {
-//        Product savedProduct = productService.saveProduct(product);
-//        return ResponseEntity.status(HttpStatus.CREATED).body(savedProduct);
-//    }
-    /////
+    /** Delete **/
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
+        productService.deleteProduct(id);
+        return ResponseEntity.noContent().build();
+    }
 
-
-
-    // POST endpoint for bulk CSV import of products
-    // CSV should include headers such as: sku, name, price, description, categoryName
+    /** Bulk CSV import **/
     @PostMapping("/import")
-    public ResponseEntity<Map<String, Object>> importProducts(@RequestParam("file") MultipartFile file) {
-        Map<String, Object> result = productService.importProducts(file);
-        return ResponseEntity.ok(result);
+    public ResponseEntity<Map<String,Object>> importProducts(
+            @RequestParam("file") MultipartFile file
+    ) {
+        return ResponseEntity.ok(productService.importProducts(file));
     }
 
-    // PUT endpoint to update the category of an existing product by its ID.
-    // Expects a JSON body like: { "categoryId": 123 }
+    /** Update category only **/
     @PutMapping("/{id}/category")
-    public ResponseEntity<Product> updateProductCategory(@PathVariable Long id, @RequestBody Map<String, Long> request) {
-        Long categoryId = request.get("categoryId");
-        Product updatedProduct = productService.updateProductCategory(id, categoryId);
-        return ResponseEntity.ok(updatedProduct);
+    public ResponseEntity<Product> updateCategory(
+            @PathVariable Long id,
+            @RequestBody Map<String,Long> body
+    ) {
+        return ResponseEntity.ok(
+                productService.updateProductCategory(id, body.get("categoryId"))
+        );
     }
 
+    /** Simple by-category list **/
     @GetMapping("/category")
-    public List<Product> getProductsByCategoryParam(@RequestParam(value="categoryId", required=false) Long categoryId) {
-
-            return productService.findByCategory(categoryId);
-
+    public List<Product> byCategory(@RequestParam Long categoryId) {
+        return productService.findByCategory(categoryId);
     }
-
 }

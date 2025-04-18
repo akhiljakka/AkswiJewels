@@ -18,8 +18,8 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long orderId;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "user_id")
+    @ManyToOne
+    @JoinColumn(name = "user_id",nullable = false)
     private User user;
 
     @ManyToOne
@@ -48,6 +48,15 @@ public class Order {
     @JsonManagedReference
     private List<OrderItem> orderItems;
 
+    // In Order.java
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "delivery_address_id")
+    private Address deliveryAddress;
+
+    @Column(length = 50)
+    private String deliverySlot;
+
+    private BigDecimal deliveryCharges = BigDecimal.ZERO;
     // Getters and setters
     // … (omitted for brevity)
 
@@ -75,6 +84,23 @@ public class Order {
     public void setTotalAmount(BigDecimal totalAmount) {
         this.totalAmount = totalAmount;
     }
+
+    public void setOrderDate(LocalDateTime orderDate) {
+        this.orderDate = orderDate;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public Address getDeliveryAddress() {
+        return deliveryAddress;
+    }
+
+    public void setDeliveryAddress(Address deliveryAddress) {
+        this.deliveryAddress = deliveryAddress;
+    }
+
     public BigDecimal getDiscountAmount() {
         return discountAmount;
     }
@@ -104,5 +130,21 @@ public class Order {
     }
     public void setOrderItems(List<OrderItem> orderItems) {
         this.orderItems = orderItems;
+    }
+
+    public String getDeliverySlot() {
+        return deliverySlot;
+    }
+
+    public void setDeliverySlot(String deliverySlot) {
+        this.deliverySlot = deliverySlot;
+    }
+
+    public BigDecimal getDeliveryCharges() {
+        return deliveryCharges;
+    }
+
+    public void setDeliveryCharges(BigDecimal deliveryCharges) {
+        this.deliveryCharges = deliveryCharges;
     }
 }

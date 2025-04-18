@@ -4,14 +4,14 @@ import com.akswi.akswi.entity.Coupon;
 import com.akswi.akswi.entity.Category;
 import com.akswi.akswi.repository.CouponRepository;
 import com.akswi.akswi.repository.CategoryRepository;
+import com.akswi.akswi.service.CouponService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/coupons")
@@ -20,6 +20,8 @@ public class CouponController {
 
     @Autowired
     private CouponRepository couponRepository;
+    @Autowired
+    private CouponService couponService;
 
     @Autowired
     private CategoryRepository categoryRepository;
@@ -28,7 +30,7 @@ public class CouponController {
     public Coupon createCoupon(@RequestBody CouponRequest couponRequest) {
         Coupon coupon = new Coupon();
         coupon.setCode(couponRequest.getCode());
- //       coupon.setDiscount(BigDecimal.valueOf(couponRequest.getDiscount()));
+        // coupon.setDiscount(BigDecimal.valueOf(couponRequest.getDiscount()));
         coupon.setDiscountType(couponRequest.getDiscountType());
         coupon.setDiscountValue(BigDecimal.valueOf(couponRequest.getDiscountValue()));
         coupon.setStartDate(couponRequest.getStartDate());
@@ -86,5 +88,49 @@ public class CouponController {
         public void setUsageLimit(Integer usageLimit) { this.usageLimit = usageLimit; }
         public List<Long> getCategoryIds() { return categoryIds; }
         public void setCategoryIds(List<Long> categoryIds) { this.categoryIds = categoryIds; }
+    }
+
+    @GetMapping("/validate")
+    public Map<String, Object> validateCoupon(@RequestParam String code) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            Coupon coupon = couponService.getCouponByCode(code);
+            // Check for expiry
+            if (coupon.getExpiryDate() != null && coupon.getExpiryDate().isBefore(LocalDate.now())) {
+                response.put("valid", false);
+                response.put("message", "Coupon expired");
+            }
+            // Check usage limit
+            else if (coupon.getUsedCount() >= coupon.getUsageLimit()) {
+                response.put("valid", false);
+                response.put("message", "Coupon usage limit exceeded");
+            } else {
+                // Get eligible category IDs from coupon's categories.
+                Set<Long> categoryIds = coupon.getCategories().stream()
+                        .map(Category::getId)
+                        .collect(Collectors.toSet());
+
+                response.put("valid", true);
+                response.put("discountType", coupon.getDiscountType());
+                response.put("discountValue", coupon.getDiscountValue());
+                response.put("usageLimit", coupon.getUsageLimit());
+                response.put("timesUsed", coupon.getUsedCount());
+                response.put("couponCategories", categoryIds);
+                response.put("message", "Coupon is valid");
+                // Optionally, you can add the coupon id to the response if needed:
+                // response.put("id", coupon.getId());
+            }
+        } catch (Exception e) {
+            response.put("valid", false);
+            response.put("message", "Coupon not found");
+        }
+        return response;
+    }
+
+    // New endpoint: Find coupon by code
+    @GetMapping("/byCode")
+    public Coupon getCouponByCode(@RequestParam String code) {
+        return couponRepository.findByCode(code)
+                .orElseThrow(() -> new RuntimeException("Coupon not found with code: " + code));
     }
 }

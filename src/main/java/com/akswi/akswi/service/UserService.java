@@ -1,8 +1,5 @@
 package com.akswi.akswi.service;
 
-
-
-
 import com.akswi.akswi.entity.User;
 import com.akswi.akswi.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +18,25 @@ public class UserService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    public User getUserById(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    public User updateProfile(Long userId, User updatedUser) {
+        return userRepository.findById(userId)
+                .map(user -> {
+                    user.setUsername(updatedUser.getUsername());
+                    user.setEmail(updatedUser.getEmail());
+                    // Optionally update password (if provided) – ensure to encode if changed
+                    if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
+                        user.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
+                    }
+                    // You might also update other fields if needed
+                    return userRepository.save(user);
+                })
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    }
     public Optional<User> getUserByUsername(String username) {
         return userRepository.findByUsername(username);
     }
@@ -40,6 +56,4 @@ public class UserService {
         return userRepository.findAll();
 
     }
-
-
 }
